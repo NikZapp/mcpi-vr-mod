@@ -73,6 +73,7 @@ std::string CommandServer_parse_injection(uchar *command_server, ConnectedClient
         ::pitch = pitch;
         ::yaw = yaw;
         ::roll = roll;
+        glRotatef(roll, 0.0, 0.0, 1.0);
         return "";
     }
 
@@ -98,24 +99,15 @@ std::string CommandServer_parse_injection(uchar *command_server, ConnectedClient
     }
 
     int page;
-    ret = sscanf(command.c_str(), "mcpivr.getColor(%i)\n", &page);
+    ret = sscanf(command.c_str(), "mcpivr.getColor(%[)]\n", &page);
     if (ret == 1) {
-        int page_size = std::min((uint32_t)65536, (width * height * 4) - (page * 65536));
-        // This may overflow on the last page, but im not sure
-        // future me if you crash because of this exact reason, lmao
-        // cast everything to int and it *should* work fine
-        if (page_size <= 0) return "";
-
-        std::string str(reinterpret_cast<char *>(color_buffer + (page * 65536)), page_size);
+        std::string str(reinterpret_cast<char *>(color_buffer), width * height * 4);
         return str;
     }
 
-    ret = sscanf(command.c_str(), "mcpivr.getDepth(%i)\n", &page);
+    ret = sscanf(command.c_str(), "mcpivr.getDepth(%[)]\n", &page);
     if (ret == 1) {
-        int page_size = std::min((uint32_t)65536, (width * height * 4) - (page * 65536));
-        if (page_size <= 0) return "";
-
-        std::string str(reinterpret_cast<char *>(depth_buffer + (page * 65536)), page_size);
+        std::string str(reinterpret_cast<char *>(depth_buffer), width * height * 4);
         return str;
     }
 
@@ -147,10 +139,6 @@ static void mcpi_callback(uchar *minecraft) {
 
     if (screen_width && screen_height) {
         update_output_buffers(screen_width, screen_height);
-        // glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, color_buffer);
-        // compress_data();
-        // std::string str(reinterpret_cast<const char*>(compressed_color_buffer.data()), compressed_color_buffer.size());
-        // std::string str(reinterpret_cast<char*>(color_buffer), width * height * 4);
     }
 
     if (!level) {
